@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot Recolector PRO</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-image: url("fondo.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      font-family: Arial, sans-serif;
+      user-select: none;
+    }
+
+    #menu, #gameOverBox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      gap: 20px;
+    }
+
+    #menu h1 {
+      font-size: 50px;
+      margin: 0;
+    }
+
+    #menu button, #gameOverBox button {
+      padding: 20px 40px;
+      font-size: 30px;
+      border: none;
+      border-radius: 20px;
+      background: #00f2fe;
+      color: #1e3c72;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #robot {
+      width: 70px;
+      height: 70px;
+      background: #00f2fe;
+      position: absolute;
+      top: 200px;
+      left: 200px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px #00f2fe;
+      transition: all 0.1s;
+      z-index: 10;
+    }
+
+    #robot::before {
+      content: "🤖";
+      font-size: 40px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .invencible {
+      animation: parpadeo 0.2s infinite;
+    }
+
+    @keyframes parpadeo {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .speedboost {
+      box-shadow: 0 0 30px #ff00ff !important;
+    }
+
+    #pieza {
+      width: 40px;
+      height: 40px;
+      background: #ffd700;
+      position: absolute;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #ffd700;
+      animation: flotar 1s infinite alternate;
+      z-index: 5;
+    }
+
+    @keyframes flotar {
+      from { transform: translateY(0); }
+      to { transform: translateY(-10px); }
+    }
+
+    .enemigo {
+      width: 60px;
+      height: 60px;
+      background: #ff4757;
+      position: absolute;
+      border-radius: 10px;
+      box-shadow: 0 0 20px #ff4757;
+      z-index: 8;
+    }
+
+    .enemigo::before {
+      content: "👾";
+      font-size: 35px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .obstaculo {
+      width: 80px;
+      height: 80px;
+      background: #57606f;
+      position: absolute;
+      border-radius: 5px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+      z-index: 6;
+    }
+
+    .obstaculo::before {
+      content: "🧱";
+      font-size: 40px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .powerup {
+      width: 45px;
+      height: 45px;
+      background: #ff00ff;
+      position: absolute;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #ff00ff;
+      animation: girar 2s linear infinite;
+      z-index: 7;
+    }
+
+    @keyframes girar {
+      from { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.2); }
+      to { transform: rotate(360deg) scale(1); }
+    }
+
+    .powerup::before {
+      content: "⚡";
+      font-size: 25px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      z-index: 100;
+    }
+
+    #controles {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      opacity: 0.7;
+      z-index: 100;
+    }
+
+    .fila {
+      display: flex;
+      justify-content: center;
+    }
+
+    #controles button {
+      width: 65px;
+      height: 65px;
+      margin: 3px;
+      border: none;
+      border-radius: 15px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 28px;
+      backdrop-filter: blur(3px);
+      cursor: pointer;
+    }
+
+    #controles button:active {
+      background: rgba(255,255,255,0.4);
+    }
+
+    #preguntaBox, #nivelCompleto, #victoriaBox {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 30px;
+      border-radius: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      z-index: 1000;
+      color: white;
+      text-align: center;
+      border: 2px solid #00f2fe;
+      min-width: 300px;
+    }
+
+    #preguntaBox button, #nivelCompleto button, #victoriaBox button {
+      padding: 15px;
+      font-size: 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #00f2fe;
+      color: #1e3c72;
+      font-weight: bold;
+    }
+
+    #btnPausa {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      font-size: 25px;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      z-index: 999;
+      background: rgba(0,0,0,0.4);
+      color: white;
+    }
+
+    #menuPausa {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      z-index: 2000;
+      color: white;
+    }
+
+    #menuPausa button {
+      padding: 15px 30px;
+      font-size: 22px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #00f2fe;
+      color: #1e3c72;
+      font-weight: bold;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+</head>
+<body>
+  <div id="menu">
+    <h1>🤖 ROBOT RECOLECTOR PRO</h1>
+    <p>Recoge piezas, esquiva enemigos 👾</p>
+    <p>Agarrá power-ups ⚡ y cuidado con los obstáculos 🧱</p>
+    <button onclick="iniciarJuego()">JUGAR</button>
+  </div>
+
+  <div id="gameOverBox" style="display:none;">
+    <h1>💀 GAME OVER</h1>
+    <p id="causaMuerte"></p>
+    <p id="puntajeFinal"></p>
+    <button onclick="reiniciarJuego()">Reintentar</button>
+  </div>
+
+  <div id="preguntaBox">
+    <h2 id="pregunta"></h2>
+    <div id="opciones"></div>
+  </div>
+
+  <div id="nivelCompleto">
+    <h1 id="textoNivel">Nivel completado</h1>
+    <p id="textoBonus"></p>
+    <button onclick="siguienteNivel()">Siguiente Nivel</button>
+  </div>
+
+  <div id="victoriaBox" style="display:none;">
+    <h1>🏆 ¡GANASTE!</h1>
+    <p>Completaste todos los niveles</p>
+    <p id="puntajeFinalVictoria"></p>
+    <button onclick="reiniciarJuego()">Jugar de nuevo</button>
+  </div>
+
+  <div id="hud">
+    <div id="puntos">Puntos: 0</div>
+    <div id="nivel">Nivel: 1</div>
+    <div id="vidas">Vidas: ❤️❤️❤️</div>
+    <div id="boost" style="display:none;">⚡ BOOST ACTIVO</div>
+  </div>
+
+  <div id="robot"></div>
+  <div id="pieza"></div>
+  <div id="contenedorEnemigos"></div>
+  <div id="contenedorObstaculos"></div>
+  <div id="contenedorPowerups"></div>
+
+  <div id="controles">
+    <div class="fila"><button onclick="mover('ArrowUp')">▲</button></div>
+    <div class="fila">
+      <button onclick="mover('ArrowLeft')">◀</button>
+      <button>●</button>
+      <button onclick="mover('ArrowRight')">▶</button>
+    </div>
+    <div class="fila"><button onclick="mover('ArrowDown')">▼</button></div>
+  </div>
+
+  <button id="btnPausa" onclick="pausarJuego()">⏸️</button>
+
+  <div id="menuPausa">
+    <h1>⏸️ PAUSA</h1>
+    <button onclick="reanudarJuego()">▶ Reanudar</button>
+    <button onclick="reiniciarNivelDesdeCero()">🔄 Reiniciar partida</button>
+    <button onclick="volverMenuPrincipal()">🏠 Volver al menú principal</button>
+  </div>
+
+  <script>
+    const sonidos = {
+      moneda: new Howl({ src: ["moneda.mp3"], volume: 0.5 }),
+      correcto: new Howl({ src: ["correcto.mp3"], volume: 0.5 }),
+      incorrecto: new Howl({ src: ["incorrecto.mp3"], volume: 0.5 }),
+      golpe: new Howl({ src: ["incorrecto.mp3"], volume: 0.4 }),
+      boost: new Howl({ src: ["correcto.mp3"], volume: 0.6 }),
+      perderVida: new Howl({ src: ["incorrecto.mp3"], volume: 0.5 }),
+      nivelUp: new Howl({ src: ["correcto.mp3"], volume: 0.7 }),
+      victoria: new Howl({ src: ["correcto.mp3"], volume: 0.7 }),
+      gameOver: new Howl({ src: ["incorrecto.mp3"], volume: 0.6 }),
+      pregunta: new Howl({ src: ["moneda.mp3"], volume: 0.4 })
+    };
+
+    const musicaFondo = new Howl({
+      src: ["https://assets.codepen.io/21542/8-bit-background-music.mp3"],
+      loop: true,
+      volume: 0.2
+    });
+
+    function playSonido(nombre) {
+      if (sonidos[nombre]) sonidos[nombre].play();
+    }
+
+    const robot = document.getElementById("robot");
+    const pieza = document.getElementById("pieza");
+
+    let x = 200;
+    let y = 200;
+    let puntos = 0;
+    let nivel = 1;
+    let vidas = 3;
+    let velocidad = 25;
+    let velocidadBase = 25;
+    let juegoActivo = false;
+    let preguntaActiva = false;
+    let invencible = false;
+    let speedBoost = false;
+    let enemigos = [];
+    let obstaculos = [];
+    let powerups = [];
+    let juegoPausado = false;
+    let preguntasUsadas = [];
+    let loopEnemigos = null;
+    let loopPowerups = null;
+
+    const baseIntervaloPreguntas = 4;
+    let intervaloPreguntas = baseIntervaloPreguntas;
+    let nextPreguntaPuntos = puntos + intervaloPreguntas;
+
+    const preguntas = [
+      { pregunta: "¿Qué usan los robots para detectar objetos?", opciones: ["Sensores", "Zapatos", "Platos"], correcta: 0 },
+      { pregunta: "¿Cómo se llama el cerebro del robot?", opciones: ["Microcontrolador", "Corazón", "Motor"], correcta: 0 },
+      { pregunta: "¿Qué energía usan la mayoría de robots?", opciones: ["Eléctrica", "Solar solamente", "Magia"], correcta: 0 },
+      { pregunta: "¿Qué es un actuador en robótica?", opciones: ["Parte que genera movimiento", "Un sensor", "La batería"], correcta: 0 },
+      { pregunta: "¿Qué lenguaje se usa mucho en robótica?", opciones: ["Python/C++", "Español", "Morse"], correcta: 0 }
+    ];
+
+    document.addEventListener("keydown", (e) => {
+      if (juegoActivo && !preguntaActiva && e.key.includes("Arrow")) {
+        e.preventDefault();
+        mover(e.key);
+      }
+    });
+
+    function iniciarJuego() {
+      resetearEstadoJuego();
+      document.getElementById("menu").style.display = "none";
+      juegoActivo = true;
+      crearNivel();
+      iniciarLoops();
+      musicaFondo.play();
+    }
+
+    function resetearEstadoJuego() {
+      detenerLoops();
+
+      x = 200;
+      y = 200;
+      puntos = 0;
+      nivel = 1;
+      vidas = 3;
+      velocidad = 25;
+      velocidadBase = 25;
+      invencible = false;
+      speedBoost = false;
+      juegoActivo = false;
+      preguntaActiva = false;
+      juegoPausado = false;
+
+      enemigos = [];
+      obstaculos = [];
+      powerups = [];
+      preguntasUsadas = [];
+
+      robot.classList.remove("invencible", "speedboost");
+      robot.style.left = x + "px";
+      robot.style.top = y + "px";
+
+      document.getElementById("puntos").innerHTML = "Puntos: 0";
+      document.getElementById("nivel").innerHTML = "Nivel: 1";
+      document.getElementById("boost").style.display = "none";
+      document.getElementById("gameOverBox").style.display = "none";
+      document.getElementById("victoriaBox").style.display = "none";
+      document.getElementById("nivelCompleto").style.display = "none";
+      document.getElementById("preguntaBox").style.display = "none";
+      document.getElementById("menuPausa").style.display = "none";
+      document.getElementById("contenedorEnemigos").innerHTML = "";
+      document.getElementById("contenedorObstaculos").innerHTML = "";
+      document.getElementById("contenedorPowerups").innerHTML = "";
+
+      actualizarVidas();
+      actualizarUmbralPregunta();
+    }
+
+    function iniciarLoops() {
+      detenerLoops();
+      loopEnemigos = setInterval(moverEnemigos, 50);
+      loopPowerups = setInterval(spawnPowerup, 8000);
+    }
+
+    function detenerLoops() {
+      if (loopEnemigos) clearInterval(loopEnemigos);
+      if (loopPowerups) clearInterval(loopPowerups);
+      loopEnemigos = null;
+      loopPowerups = null;
+    }
+
+    function actualizarUmbralPregunta() {
+  intervaloPreguntas = baseIntervaloPreguntas + Math.max(0, nivel - 1) * 2;
+
+  if (nextPreguntaPuntos <= puntos) {
+    nextPreguntaPuntos = puntos + intervaloPreguntas;
+  }
+}
+
+    function crearNivel() {
+      document.getElementById("contenedorEnemigos").innerHTML = "";
+      document.getElementById("contenedorObstaculos").innerHTML = "";
+      document.getElementById("contenedorPowerups").innerHTML = "";
+
+      enemigos = [];
+      obstaculos = [];
+      powerups = [];
+
+      preguntaActiva = false;
+      document.getElementById("preguntaBox").style.display = "none";
+      document.getElementById("nivelCompleto").style.display = "none";
+
+      for (let i = 0; i < 2 + nivel; i++) crearObstaculo();
+      for (let i = 0; i < Math.floor(nivel / 2) + 1; i++) crearEnemigo();
+
+      actualizarUmbralPregunta();
+      moverPieza();
+    }
+
+    function posicionValida(px, py, w, h) {
+      if (px < x + 70 && px + w > x && py < y + 70 && py + h > y) return false;
+
+      for (let obs of obstaculos) {
+        if (px < obs.x + obs.w && px + w > obs.x && py < obs.y + obs.h && py + h > obs.y) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function colisionaConRobot(rx, ry, rw, rh) {
+      return rx < x + 70 && rx + rw > x && ry < y + 70 && ry + rh > y;
+    }
+
+    function crearObstaculo() {
+      const obs = document.createElement("div");
+      obs.className = "obstaculo";
+
+      let posX, posY, intentos = 0;
+      do {
+        posX = Math.random() * (window.innerWidth - 200) + 100;
+        posY = Math.random() * (window.innerHeight - 300) + 150;
+        intentos++;
+      } while (!posicionValida(posX, posY, 80, 80) && intentos < 50);
+
+      obs.style.left = posX + "px";
+      obs.style.top = posY + "px";
+
+      document.getElementById("contenedorObstaculos").appendChild(obs);
+      obstaculos.push({ elem: obs, x: posX, y: posY, w: 80, h: 80 });
+    }
+
+    function crearEnemigo() {
+      const ene = document.createElement("div");
+      ene.className = "enemigo";
+
+      let posX, posY, intentos = 0;
+      do {
+        posX = Math.random() * (window.innerWidth - 100);
+        posY = Math.random() * (window.innerHeight - 100);
+        intentos++;
+      } while ((colisionaConObstaculo(posX, posY, 60, 60) || colisionaConRobot(posX, posY, 60, 60)) && intentos < 50);
+
+      ene.style.left = posX + "px";
+      ene.style.top = posY + "px";
+
+      document.getElementById("contenedorEnemigos").appendChild(ene);
+      enemigos.push({
+        elem: ene,
+        x: posX,
+        y: posY,
+        w: 60,
+        h: 60,
+        dirX: Math.random() > 0.5 ? 1 : -1,
+        dirY: Math.random() > 0.5 ? 1 : -1,
+        vel: 2 + nivel
+      });
+    }
+
+    function spawnPowerup() {
+      if (!juegoActivo || preguntaActiva || juegoPausado) return;
+      if (powerups.length > 0) return;
+
+      const pow = document.createElement("div");
+      pow.className = "powerup";
+
+      let posX, posY, intentos = 0;
+      do {
+        posX = Math.random() * (window.innerWidth - 100) + 50;
+        posY = Math.random() * (window.innerHeight - 200) + 100;
+        intentos++;
+      } while ((colisionaConObstaculo(posX, posY, 45, 45) || colisionaConRobot(posX, posY, 45, 45)) && intentos < 50);
+
+      pow.style.left = posX + "px";
+      pow.style.top = posY + "px";
+
+      document.getElementById("contenedorPowerups").appendChild(pow);
+      powerups.push({ elem: pow, x: posX, y: posY, w: 45, h: 45 });
+
+      setTimeout(() => {
+        if (pow.parentNode) {
+          pow.remove();
+          powerups = powerups.filter(p => p.elem !== pow);
+        }
+      }, 8000);
+    }
+
+    function mover(direccion) {
+      if (!juegoActivo || preguntaActiva || juegoPausado) return;
+
+      let nuevaX = x;
+      let nuevaY = y;
+
+      if (direccion === "ArrowUp") nuevaY -= velocidad;
+      if (direccion === "ArrowDown") nuevaY += velocidad;
+      if (direccion === "ArrowLeft") nuevaX -= velocidad;
+      if (direccion === "ArrowRight") nuevaX += velocidad;
+
+      nuevaX = Math.max(0, Math.min(window.innerWidth - 70, nuevaX));
+      nuevaY = Math.max(0, Math.min(window.innerHeight - 70, nuevaY));
+
+      if (!colisionaConObstaculo(nuevaX, nuevaY, 70, 70)) {
+        x = nuevaX;
+        y = nuevaY;
+        robot.style.left = x + "px";
+        robot.style.top = y + "px";
+      }
+
+      detectarColisiones();
+    }
+
+    function colisionaConObstaculo(rx, ry, rw, rh) {
+      for (let obs of obstaculos) {
+        if (rx < obs.x + obs.w && rx + rw > obs.x && ry < obs.y + obs.h && ry + rh > obs.y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function moverEnemigos() {
+      if (!juegoActivo || preguntaActiva || juegoPausado) return;
+
+      enemigos.forEach(ene => {
+        ene.x += ene.dirX * ene.vel;
+        ene.y += ene.dirY * ene.vel;
+
+        if (ene.x <= 0 || ene.x >= window.innerWidth - ene.w) ene.dirX *= -1;
+        if (ene.y <= 0 || ene.y >= window.innerHeight - ene.h) ene.dirY *= -1;
+
+        for (let obs of obstaculos) {
+          if (ene.x < obs.x + obs.w && ene.x + ene.w > obs.x && ene.y < obs.y + obs.h && ene.y + ene.h > obs.y) {
+            ene.dirX *= -1;
+            ene.dirY *= -1;
+          }
+        }
+
+        ene.elem.style.left = ene.x + "px";
+        ene.elem.style.top = ene.y + "px";
+      });
+
+      detectarColisiones();
+    }
+
+    function detectarColisiones() {
+  const robotRect = { x: x, y: y, w: 70, h: 70 };
+  const piezaRect = pieza.getBoundingClientRect();
+
+  if (
+    robotRect.x < piezaRect.right &&
+    robotRect.x + robotRect.w > piezaRect.left &&
+    robotRect.y < piezaRect.bottom &&
+    robotRect.y + robotRect.h > piezaRect.top
+  ) {
+    puntos++;
+    playSonido("moneda");
+    document.getElementById("puntos").innerHTML = "Puntos: " + puntos;
+
+    moverPieza();
+
+    if (puntos >= nextPreguntaPuntos && !preguntaActiva && !juegoPausado) {
+      mostrarPregunta();
+      actualizarUmbralPregunta();
+    }
+
+    verificarNivel();
+  }
+
+  if (!invencible) {
+    for (let ene of enemigos) {
+      if (
+        robotRect.x < ene.x + ene.w &&
+        robotRect.x + robotRect.w > ene.x &&
+        robotRect.y < ene.y + ene.h &&
+        robotRect.y + robotRect.h > ene.y
+      ) {
+        perderVida();
+        break;
+      }
+    }
+  }
+
+  powerups.forEach((pow, index) => {
+    if (
+      robotRect.x < pow.x + pow.w &&
+      robotRect.x + robotRect.w > pow.x &&
+      robotRect.y < pow.y + pow.h &&
+      robotRect.y + robotRect.h > pow.y
+    ) {
+      activarSpeedBoost();
+      pow.elem.remove();
+      powerups.splice(index, 1);
+    }
+  });
+}
+
+    function activarSpeedBoost() {
+      speedBoost = true;
+      velocidad = velocidadBase * 2;
+      robot.classList.add("speedboost");
+      document.getElementById("boost").style.display = "block";
+
+      setTimeout(() => {
+        speedBoost = false;
+        velocidad = velocidadBase;
+        robot.classList.remove("speedboost");
+        document.getElementById("boost").style.display = "none";
+      }, 5000);
+    }
+
+    function perderVida() {
+      playSonido("incorrecto");
+      vidas--;
+      invencible = true;
+      robot.classList.add("invencible");
+      actualizarVidas();
+
+      if (vidas <= 0) {
+        gameOver("Te quedaste sin vidas 💀");
+      } else {
+        puntos = Math.max(0, puntos - 2);
+        document.getElementById("puntos").innerHTML = "Puntos: " + puntos;
+        actualizarUmbralPregunta();
+
+        setTimeout(() => {
+          invencible = false;
+          robot.classList.remove("invencible");
+        }, 2000);
+      }
+    }
+
+    function actualizarVidas() {
+      let corazones = "";
+      for (let i = 0; i < vidas; i++) corazones += "❤️";
+      for (let i = vidas; i < 3; i++) corazones += "🖤";
+      document.getElementById("vidas").innerHTML = "Vidas: " + corazones;
+    }
+
+    function moverPieza() {
+      let nuevaX, nuevaY, intentos = 0;
+      do {
+        nuevaX = Math.random() * (window.innerWidth - 100) + 50;
+        nuevaY = Math.random() * (window.innerHeight - 200) + 100;
+        intentos++;
+      } while (!posicionValida(nuevaX, nuevaY, 40, 40) && intentos < 50);
+
+      pieza.style.left = nuevaX + "px";
+      pieza.style.top = nuevaY + "px";
+    }
+
+    function verificarNivel() {
+      const nivelAnterior = nivel;
+
+      if (puntos >= 25) nivel = 6;
+      else if (puntos >= 20) nivel = 5;
+      else if (puntos >= 15) nivel = 4;
+      else if (puntos >= 10) nivel = 3;
+      else if (puntos >= 5) nivel = 2;
+
+      if (nivel > nivelAnterior && nivel < 6) {
+        document.getElementById("nivel").innerHTML = "Nivel: " + nivel;
+        mostrarNivelCompleto(nivelAnterior);
+        velocidadBase += 3;
+        if (!speedBoost) velocidad = velocidadBase;
+      }
+
+      actualizarUmbralPregunta();
+
+      if (puntos >= 30) {
+        victoria();
+      }
+    }
+
+    function mostrarPregunta() {
+      preguntaActiva = true;
+      actualizarUmbralPregunta();
+
+      if (preguntasUsadas.length >= preguntas.length) {
+        preguntasUsadas = [];
+      }
+
+      let indice;
+      do {
+        indice = Math.floor(Math.random() * preguntas.length);
+      } while (preguntasUsadas.includes(indice));
+
+      preguntasUsadas.push(indice);
+      const preguntaActual = preguntas[indice];
+
+      document.getElementById("pregunta").textContent = preguntaActual.pregunta;
+
+      let opcionesHTML = "";
+      preguntaActual.opciones.forEach((opcion, index) => {
+        opcionesHTML += `<button onclick="verificarRespuesta(${index}, ${preguntaActual.correcta})">${opcion}</button>`;
+      });
+
+      document.getElementById("opciones").innerHTML = opcionesHTML;
+      document.getElementById("preguntaBox").style.display = "flex";
+    }
+
+    function verificarRespuesta(seleccionada, correcta) {
+      preguntaActiva = false;
+      document.getElementById("preguntaBox").style.display = "none";
+
+      if (seleccionada === correcta) {
+        playSonido("correcto");
+        puntos += 2;
+        document.getElementById("puntos").innerHTML = "Puntos: " + puntos;
+        actualizarUmbralPregunta();
+        alert("✅ ¡Correcto! +2 puntos bonus");
+      } else {
+        playSonido("incorrecto");
+        alert("❌ Incorrecto");
+      }
+    }
+
+    function mostrarNivelCompleto(numero) {
+      juegoActivo = false;
+      document.getElementById("nivelCompleto").style.display = "flex";
+      document.getElementById("textoNivel").innerHTML = `🎉 Nivel ${numero} completado`;
+      document.getElementById("textoBonus").innerHTML = "+1 enemigo, +1 obstáculo";
+    }
+
+    function siguienteNivel() {
+      document.getElementById("nivelCompleto").style.display = "none";
+      juegoActivo = true;
+      crearNivel();
+    }
+
+    function victoria() {
+      juegoActivo = false;
+      detenerLoops();
+      document.getElementById("victoriaBox").style.display = "flex";
+      document.getElementById("puntajeFinalVictoria").innerHTML = `Puntaje final: ${puntos} puntos`;
+    }
+
+    function gameOver(razon) {
+      juegoActivo = false;
+      detenerLoops();
+      document.getElementById("gameOverBox").style.display = "flex";
+      document.getElementById("causaMuerte").innerHTML = razon;
+      document.getElementById("puntajeFinal").innerHTML = `Puntaje: ${puntos} puntos`;
+    }
+
+    function pausarJuego() {
+      if (!juegoActivo) return;
+      juegoPausado = true;
+      document.getElementById("menuPausa").style.display = "flex";
+    }
+
+    function reanudarJuego() {
+      juegoPausado = false;
+      document.getElementById("menuPausa").style.display = "none";
+    }
+
+    function volverMenuPrincipal() {
+      juegoActivo = false;
+      juegoPausado = false;
+      detenerLoops();
+      document.getElementById("menuPausa").style.display = "none";
+      document.getElementById("menu").style.display = "flex";
+    }
+
+    function reiniciarNivelDesdeCero() {
+      resetearEstadoJuego();
+      document.getElementById("menu").style.display = "none";
+      juegoActivo = true;
+      crearNivel();
+      iniciarLoops();
+    }
+
+    function reiniciarJuego() {
+      resetearEstadoJuego();
+      document.getElementById("menu").style.display = "none";
+      juegoActivo = true;
+      crearNivel();
+      iniciarLoops();
+    }
+  </script>
+</body>
+</html>
